@@ -10,7 +10,8 @@ class chatstate(TypedDict):
 
 def access_llm(state:chatstate):
    llm=ChatGoogleGenerativeAI(model='gemini-3.5-flash')
-   print(llm.invoke(state['messages']).text)
+   newreply=llm.invoke(state["messages"])
+   return {'messages':newreply}
 
 graph=StateGraph(chatstate)
 
@@ -27,4 +28,5 @@ while 1:
   if humanmessage=="end":
      break
   
-  chatai.invoke({"messages":[("user",humanmessage)]})
+  result=chatai.invoke({"messages":[("user",humanmessage)]})
+  print(result["messages"][-1].text)
