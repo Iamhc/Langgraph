@@ -2,6 +2,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph,START,END,add_messages
 from typing import Annotated,TypedDict
+from langgraph.checkpoint.memory import InMemorySaver
 
 load_dotenv()
 
@@ -20,7 +21,9 @@ graph.add_node('llm',access_llm)
 graph.add_edge(START,'llm')
 graph.add_edge('llm',END)
 
-chatai=graph.compile()
+chatai=graph.compile(checkpointer=InMemorySaver())
+
+config={"configurable":{"thread_id":"1"}}
 
 while 1:  
   humanmessage=input("input please ")
@@ -28,5 +31,5 @@ while 1:
   if humanmessage=="end":
      break
   
-  result=chatai.invoke({"messages":[("user",humanmessage)]})
+  result=chatai.invoke({"messages":[("user",humanmessage)]},config)
   print(result["messages"][-1].text)
