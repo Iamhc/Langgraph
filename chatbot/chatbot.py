@@ -5,12 +5,13 @@ from typing import Annotated,TypedDict
 from langgraph.checkpoint.memory import InMemorySaver
 
 load_dotenv()
+llm=ChatGoogleGenerativeAI(model='gemini-3.5-flash')
 
 class chatstate(TypedDict):
    messages:Annotated[list[str],add_messages]
 
 def access_llm(state:chatstate):
-   llm=ChatGoogleGenerativeAI(model='gemini-3.5-flash')
+   
    newreply=llm.invoke(state["messages"])
    return {'messages':newreply}
 
@@ -31,5 +32,5 @@ while 1:
   if humanmessage=="end":
      break
   
-  result=chatai.invoke({"messages":[("user",humanmessage)]},config)
-  print(result["messages"][-1].text)
+  for chunk,metadata in chatai.stream({"messages":[("user",humanmessage)]},config,stream_mode="messages"): 
+    print(chunk.text,end="",flush=True)
