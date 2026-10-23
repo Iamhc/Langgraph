@@ -2,7 +2,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph,START,END,add_messages
 from typing import Annotated,TypedDict
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
+import uuid
+import sqlite3
 
 load_dotenv()
 llm=ChatGoogleGenerativeAI(model='gemini-3.5-flash')
@@ -22,7 +24,8 @@ graph.add_node('llm',access_llm)
 graph.add_edge(START,'llm')
 graph.add_edge('llm',END)
 
-chatai=graph.compile(checkpointer=InMemorySaver())
+connection=sqlite3.connect(database="chatbot.db",check_same_thread=False)
+chatai=graph.compile(checkpointer=SqliteSaver(conn=connection))
 
 config={"configurable":{"thread_id":"1"}}
 
@@ -34,3 +37,5 @@ while 1:
   
   for chunk,metadata in chatai.stream({"messages":[("user",humanmessage)]},config,stream_mode="messages"): 
     print(chunk.text,end="",flush=True)
+
+  
