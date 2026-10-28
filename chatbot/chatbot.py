@@ -7,6 +7,7 @@ import uuid
 import sqlite3
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolNode,tools_condition
+from langgraph.types import Command,interrupt
 
 load_dotenv()
 llm=ChatGoogleGenerativeAI(model='gemini-3.5-flash')
@@ -14,6 +15,10 @@ llm=ChatGoogleGenerativeAI(model='gemini-3.5-flash')
 @tool
 def calculate(a:int,b:int):
    """"whenever calculation based anything is used or two number given"""
+   decision=interrupt(f"u want {a} {b} to be multiplied??")
+   if decision!="yes":
+      return "no"
+   
    return a*b
 
 all_tools=[calculate]
@@ -24,7 +29,7 @@ class chatstate(TypedDict):
 def access_llm(state:chatstate):
    
    newreply=llm.invoke(state["messages"])
-   return {'messages':newreply}
+   return {'messages':[newreply]}
 
 graph=StateGraph(chatstate)
 
@@ -40,15 +45,26 @@ graph.add_edge('tools','llm')
 connection=sqlite3.connect(database="chatbot.db",check_same_thread=False)
 chatai=graph.compile(checkpointer=SqliteSaver(conn=connection))
 
-config={"configurable":{"thread_id":"1"}}
+config={"configurable":{"thread_id":"2"}}
 
 while 1:  
   humanmessage=input("input please ")
   
   if humanmessage=="end":
      break
-  
+
+ 
   for chunk,metadata in chatai.stream({"messages":[("user",humanmessage)]},config,stream_mode="messages"): 
     print(chunk.text,end="",flush=True)
 
+  state=chatai.get_state(config)
+
+  if state.tasks and state.tasks[0].interrupts:
+     question=state.tasks[0].interrupts[0].value
+     answer=input(f"{question}")
+     for chunk, metadata in chatai.stream(Command(resume=answer),config,stream_mode="messages"):
+         print(chunk.text,end="",flush=True)
+  
+
+  
   
